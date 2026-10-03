@@ -1,0 +1,15 @@
+[
+  {
+    "id": "offer-1",
+    "title": "Festive Luxury Modular Interior Handover Guarantee",
+    "subtitle": "Book your 3BHK or 4BHK interior fitout and get a guaranteed 40-day handover with complimentary Italian Quartz countertops.",
+    "badge": "LIMITED TIME OFFER",
+    "image": "/customized-home-kitchen.jpg",
+    "startDate": "2025-02-01",
+    "endDate": "2027-12-31",
+    "discount": "Flat 15% OFF",
+    "ctaText": "Claim Offer",
+    "ctaLink": "/contact",
+    "isActive": true
+  }
+]

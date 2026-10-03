@@ -1,0 +1,13 @@
+{
+  "id": "video-showcase-main",
+  "title": "Luxury Home Interior Walkthrough & Factory Tour",
+  "subtitle": "Anjani Infra Hyderabad • Direct Video Showcase",
+  "badgeText": "Plays Directly Here (No New Tabs)",
+  "videoType": "youtube",
+  "videoUrl": "https://www.youtube.com/watch?v=EJJCbEKK5uw",
+  "embedUrl": "https://www.youtube-nocookie.com/embed/EJJCbEKK5uw?rel=0&modestbranding=1&playsinline=1",
+  "directVideoUrl": "https://nsmobuinpjloyiejtjth.supabase.co/storage/v1/object/public/anjani-media/1790923353615-WhatsApp_Audio_2026-07-21_at_9.34.04_PM__1_.mp4",
+  "posterImage": "https://nsmobuinpjloyiejtjth.supabase.co/storage/v1/object/public/anjani-media/projects/proj1.jpg",
+  "isActive": true,
+  "updatedAt": "2026-10-02T06:43:01.677Z"
+}

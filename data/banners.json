@@ -1,0 +1,58 @@
+[
+  {
+    "id": "banner-1",
+    "title": "Crafting Bespoke Luxury Living Spaces",
+    "tagline": "HYDERABAD'S PREMIER INTERIOR DESIGN STUDIO",
+    "subtitle": "100% Customized modular woodwork, turnkey luxury villa & apartment interiors with a 10-year warranty.",
+    "image": "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=2000&q=90",
+    "link": "/customized-interiors",
+    "buttonText": "Explore More",
+    "startDate": "2025-01-01",
+    "endDate": "2027-12-31",
+    "isActive": true,
+    "priority": 1,
+    "placement": "hero"
+  },
+  {
+    "id": "banner-2",
+    "title": "Bespoke Master Suites & Designer Wardrobes",
+    "tagline": "PRECISION GERMAN HARDWARE & FINISHES",
+    "subtitle": "Engineered walk-in wardrobes, sliding systems, and ambient lighting crafted for luxurious Hyderabad homes.",
+    "image": "https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=2000&q=90",
+    "link": "/products/bedroom",
+    "buttonText": "Explore More",
+    "startDate": "2025-01-01",
+    "endDate": "2027-12-31",
+    "isActive": true,
+    "priority": 2,
+    "placement": "hero"
+  },
+  {
+    "id": "banner-3",
+    "title": "Chef-Grade Ergonomic Modular Kitchens",
+    "tagline": "WATERPROOF & TERMITE-RESISTANT",
+    "subtitle": "BWP Marine grade ply, acrylic & quartz island counters customized for modern Indian culinary living.",
+    "image": "https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=2000&q=90",
+    "link": "/products/kitchen",
+    "buttonText": "Explore More",
+    "startDate": "2025-01-01",
+    "endDate": "2027-12-31",
+    "isActive": true,
+    "priority": 3,
+    "placement": "hero"
+  },
+  {
+    "id": "banner-4",
+    "title": "Architectural Dining & Contemporary Lounges",
+    "tagline": "END-TO-END 40 WORKING DAYS HANDOVER",
+    "subtitle": "Direct factory manufacturing with zero middlemen, 3D visualization, and complete transparent pricing.",
+    "image": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=2000&q=90",
+    "link": "/design-and-build",
+    "buttonText": "Explore More",
+    "startDate": "2025-01-01",
+    "endDate": "2027-12-31",
+    "isActive": true,
+    "priority": 4,
+    "placement": "hero"
+  }
+]

@@ -1,0 +1,112 @@
+[
+  {
+    "id": "testim-1",
+    "name": "Mrs. Ananya Reddy",
+    "location": "Banjara Hills, Hyderabad",
+    "text": "Finding a passionate team to craft my dream home in Hyderabad was crucial. Anjani Infra exceeded every expectation.",
+    "image": "https://nsmobuinpjloyiejtjth.supabase.co/storage/v1/object/public/anjani-media/testimonial-client-3.jpg",
+    "rating": 5,
+    "isActive": true,
+    "displayOrder": 1,
+    "createdAt": "2026-01-10T10:00:00.000Z"
+  },
+  {
+    "id": "testim-2",
+    "name": "Mr. & Mrs. Prannoy HS",
+    "location": "Gachibowli, Hyderabad",
+    "text": "Structured, organized and pleasant to deal with. Delivered our flat interiors exactly as promised on schedule.",
+    "image": "https://nsmobuinpjloyiejtjth.supabase.co/storage/v1/object/public/anjani-media/testimonial-family-2.jpg",
+    "rating": 5,
+    "isActive": true,
+    "displayOrder": 2,
+    "createdAt": "2026-01-15T10:00:00.000Z"
+  },
+  {
+    "id": "testim-3",
+    "name": "Mr. Surendra N M & Family",
+    "location": "Jubilee Hills, Hyderabad",
+    "text": "We are extremely satisfied with the modular kitchen, factory finishes and on-time handover for our home.",
+    "image": "https://nsmobuinpjloyiejtjth.supabase.co/storage/v1/object/public/anjani-media/testimonial-family-1.jpg",
+    "rating": 5,
+    "isActive": true,
+    "displayOrder": 3,
+    "createdAt": "2026-02-01T10:00:00.000Z"
+  },
+  {
+    "id": "testim-4",
+    "name": "Mr. Kiran Nair & Family",
+    "location": "Kompally, Hyderabad",
+    "text": "Proper communication was maintained throughout execution. Our whole family loves our newly designed residence.",
+    "image": "https://nsmobuinpjloyiejtjth.supabase.co/storage/v1/object/public/anjani-media/testimonial-family-4.jpg",
+    "rating": 5,
+    "isActive": true,
+    "displayOrder": 4,
+    "createdAt": "2026-02-10T10:00:00.000Z"
+  },
+  {
+    "id": "testim-5",
+    "name": "Mr. Azeem C & Family",
+    "location": "Kokapet, Hyderabad",
+    "text": "Very professional interior designers. The team was responsive, transparent, and finished our project on time.",
+    "image": "https://nsmobuinpjloyiejtjth.supabase.co/storage/v1/object/public/anjani-media/testimonial-client-5.jpg",
+    "rating": 5,
+    "isActive": true,
+    "displayOrder": 5,
+    "createdAt": "2026-02-18T10:00:00.000Z"
+  },
+  {
+    "id": "testim-6",
+    "name": "Mr. Rajesh Varma & Family",
+    "location": "Financial District, Hyderabad",
+    "text": "The 3D space planning and Italian modular finishes in our villa are simply world-class. Highly recommended!",
+    "image": "https://nsmobuinpjloyiejtjth.supabase.co/storage/v1/object/public/anjani-media/testimonial-family-5.jpg",
+    "rating": 5,
+    "isActive": true,
+    "displayOrder": 6,
+    "createdAt": "2026-03-01T10:00:00.000Z"
+  },
+  {
+    "id": "testim-7",
+    "name": "Mr. & Mrs. Karthik Rao",
+    "location": "Tellapur, Hyderabad",
+    "text": "Our modular kitchen with German fittings is a dream come true. Handover was prompt within 40 working days.",
+    "image": "https://nsmobuinpjloyiejtjth.supabase.co/storage/v1/object/public/anjani-media/testimonial-family-6.jpg",
+    "rating": 5,
+    "isActive": true,
+    "displayOrder": 7,
+    "createdAt": "2026-03-12T10:00:00.000Z"
+  },
+  {
+    "id": "testim-8",
+    "name": "Mr. Venkatramana & Family",
+    "location": "Madhapur, Hyderabad",
+    "text": "From design drawings to final execution, the team took care of every small detail. Our parents are so delighted.",
+    "image": "https://nsmobuinpjloyiejtjth.supabase.co/storage/v1/object/public/anjani-media/testimonial-family-7.jpg",
+    "rating": 5,
+    "isActive": true,
+    "displayOrder": 8,
+    "createdAt": "2026-03-20T10:00:00.000Z"
+  },
+  {
+    "id": "testim-9",
+    "name": "Dr. Sravanthi Ch",
+    "location": "Hitec City, Hyderabad",
+    "text": "Impeccable aesthetics and durable materials. They transformed our 3 BHK apartment into a serene, elegant haven.",
+    "image": "https://nsmobuinpjloyiejtjth.supabase.co/storage/v1/object/public/anjani-media/testimonial-client-8.jpg",
+    "rating": 5,
+    "isActive": true,
+    "displayOrder": 9,
+    "createdAt": "2026-04-05T10:00:00.000Z"
+  },
+  {
+    "id": "testim-10",
+    "name": "Mr. Vikramaditya Somani",
+    "location": "Manikonda, Hyderabad",
+    "text": "Honest pricing, top-tier craftsmanship and zero hassle. Anjani Infra is hands down the best interior team in Hyderabad.",
+    "image": "https://nsmobuinpjloyiejtjth.supabase.co/storage/v1/object/public/anjani-media/testimonial-client-9.jpg",
+    "rating": 5,
+    "isActive": true,
+    "displayOrder": 10,
+    "createdAt": "2026-04-18T10:00:00.000Z"
+  }
+]

@@ -1,0 +1,222 @@
+[
+  {
+    "id": "proj-2",
+    "dbId": "proj-2",
+    "name": "Sapphire Urban High-Rise Towers",
+    "location": "Bengaluru",
+    "type": "Civil",
+    "area": "380,000 Sq.Ft.",
+    "category": "Civil",
+    "featured": true,
+    "image": "https://nsmobuinpjloyiejtjth.supabase.co/storage/v1/object/public/anjani-media/projects/proj2.jpg",
+    "client": "Private Client",
+    "year": "2026",
+    "startDate": "",
+    "completionDate": "40 Days",
+    "description": "G+32 Story structural tower constructed with high-strength RCC M50 concrete.",
+    "specs": [],
+    "gallery": [
+      "https://nsmobuinpjloyiejtjth.supabase.co/storage/v1/object/public/anjani-media/projects/proj2.jpg"
+    ]
+  },
+  {
+    "id": "proj-1",
+    "dbId": "proj-1",
+    "name": "Grand Riviera Commercial Plaza",
+    "location": "Gurugram, NCR",
+    "type": "Civil",
+    "area": "250,000 Sq.Ft.",
+    "category": "Civil",
+    "featured": true,
+    "image": "https://nsmobuinpjloyiejtjth.supabase.co/storage/v1/object/public/anjani-media/projects/proj1.jpg",
+    "client": "Private Client",
+    "year": "2026",
+    "startDate": "",
+    "completionDate": "40 Days",
+    "description": "A 250,000 sq.ft state-of-the-art commercial plaza engineered from foundation to high-rise RCC superstructure.",
+    "specs": [],
+    "gallery": [
+      "https://nsmobuinpjloyiejtjth.supabase.co/storage/v1/object/public/anjani-media/projects/proj1.jpg"
+    ]
+  },
+  {
+    "id": "proj-104",
+    "dbId": "proj-104",
+    "name": "Turnkey Luxury Villa — Boulder Hills Golf Community",
+    "location": "Gachibowli, Hyderabad",
+    "type": "Living Room",
+    "area": "₹35 - ₹45 Lakhs",
+    "category": "Living Room",
+    "featured": true,
+    "image": "/category-living.jpg",
+    "client": "Private Client",
+    "year": "2026",
+    "startDate": "",
+    "completionDate": "42 Days",
+    "description": "Contemporary open-concept living room with double-height ceiling, textured boucle sofa, and marble floor accents.",
+    "specs": [],
+    "gallery": [
+      "/category-living.jpg"
+    ]
+  },
+  {
+    "id": "proj-105",
+    "dbId": "proj-105",
+    "name": "Modern 3.5BHK Apartment — Rajapushpa Atria",
+    "location": "Kokapet, Hyderabad",
+    "type": "Dining & Pooja",
+    "area": "₹12 - ₹16 Lakhs",
+    "category": "Dining & Pooja",
+    "featured": false,
+    "image": "/category-dining.jpg",
+    "client": "Private Client",
+    "year": "2026",
+    "startDate": "",
+    "completionDate": "36 Days",
+    "description": "Custom 8-seater live-edge dining room integrated with sacred CNC Corian pooja mandir.",
+    "specs": [],
+    "gallery": [
+      "/category-dining.jpg"
+    ]
+  },
+  {
+    "id": "proj-106",
+    "dbId": "proj-106",
+    "name": "Contemporary 4BHK Villa — Muppa Alankrita",
+    "location": "Tellapur, Hyderabad",
+    "type": "Bedroom & Wardrobe",
+    "area": "₹20 - ₹26 Lakhs",
+    "category": "Bedroom & Wardrobe",
+    "featured": false,
+    "image": "/faq-bedroom-hero.jpg",
+    "client": "Private Client",
+    "year": "2026",
+    "startDate": "",
+    "completionDate": "39 Days",
+    "description": "Bespoke bedroom woodwork, floor-to-ceiling tinted glass sliding wardrobes, and study suite.",
+    "specs": [],
+    "gallery": [
+      "/faq-bedroom-hero.jpg"
+    ]
+  },
+  {
+    "id": "proj-102",
+    "dbId": "proj-102",
+    "name": "3BHK High-Rise Apartment — My Home Bhooja",
+    "location": "Hitec City, Hyderabad",
+    "type": "Modular Kitchen",
+    "area": "₹14 - ₹18 Lakhs",
+    "category": "Modular Kitchen",
+    "featured": true,
+    "image": "/customized-home-kitchen.jpg",
+    "client": "Private Client",
+    "year": "2026",
+    "startDate": "",
+    "completionDate": "35 Days",
+    "description": "Full modular kitchen with Blum servo-drive motorized lift-ups, quartz countertops, and breakfast bar.",
+    "specs": [],
+    "gallery": [
+      "/customized-home-kitchen.jpg"
+    ]
+  },
+  {
+    "id": "proj-108",
+    "dbId": "proj-108",
+    "name": "Executive Living Room & Entertainment Lounge — SAS Crown",
+    "location": "Kokapet, Hyderabad",
+    "type": "Living Room",
+    "area": "₹28 - ₹38 Lakhs",
+    "category": "Living Room",
+    "featured": true,
+    "image": "/contemporary-interior-hyderabad.jpg",
+    "client": "Private Client",
+    "year": "2026",
+    "startDate": "",
+    "completionDate": "40 Days",
+    "description": "Statuario marble & fluted charcoal TV media wall with floating audio console.",
+    "specs": [],
+    "gallery": [
+      "/contemporary-interior-hyderabad.jpg"
+    ]
+  },
+  {
+    "id": "proj-109",
+    "dbId": "proj-109",
+    "name": "Custom Kids Fantasy Bedroom — My Home Avatar",
+    "location": "Narsingi, Hyderabad",
+    "type": "Bedroom & Wardrobe",
+    "area": "₹8 - ₹12 Lakhs",
+    "category": "Bedroom & Wardrobe",
+    "featured": false,
+    "image": "/category-kids-room.jpg",
+    "client": "Private Client",
+    "year": "2026",
+    "startDate": "",
+    "completionDate": "30 Days",
+    "description": "Whimsical kids bedroom with study suite, loft storage, and ergonomic bunk bed.",
+    "specs": [],
+    "gallery": [
+      "/category-kids-room.jpg"
+    ]
+  },
+  {
+    "id": "proj-110",
+    "dbId": "proj-110",
+    "name": "Designer Foyer Partition & Shoe Suite — Lansum Etania",
+    "location": "Gachibowli, Hyderabad",
+    "type": "Living Room",
+    "area": "₹6 - ₹9 Lakhs",
+    "category": "Living Room",
+    "featured": false,
+    "image": "/category-partition.jpg",
+    "client": "Private Client",
+    "year": "2026",
+    "startDate": "",
+    "completionDate": "25 Days",
+    "description": "Architectural fluted wooden room divider between foyer and formal living room.",
+    "specs": [],
+    "gallery": [
+      "/category-partition.jpg"
+    ]
+  },
+  {
+    "id": "proj-107",
+    "dbId": "proj-107",
+    "name": "Gourmet Acrylic Modular Kitchen — DSR The First",
+    "location": "Gachibowli, Hyderabad",
+    "type": "Modular Kitchen",
+    "area": "₹16 - ₹22 Lakhs",
+    "category": "Modular Kitchen",
+    "featured": true,
+    "image": "/category-kitchen.jpg",
+    "client": "Private Client",
+    "year": "2026",
+    "startDate": "",
+    "completionDate": "35 Days",
+    "description": "Dual-tone high-gloss acrylic modular kitchen with integrated pull-out pantry and boiling-water-proof ply.",
+    "specs": [],
+    "gallery": [
+      "/category-kitchen.jpg"
+    ]
+  },
+  {
+    "id": "proj-103",
+    "dbId": "proj-103",
+    "name": "Bespoke Penthouse Master Suite — Aparna One",
+    "location": "Shaikpet, Hyderabad",
+    "type": "Bedroom & Wardrobe",
+    "area": "₹18 - ₹24 Lakhs",
+    "category": "Bedroom & Wardrobe",
+    "featured": true,
+    "image": "/category-bedroom.jpg",
+    "client": "Private Client",
+    "year": "2026",
+    "startDate": "",
+    "completionDate": "40 Days",
+    "description": "Luxury master bedroom suite with full-height acoustic headboard, walk-in dressing wardrobe, and concealed LED cove lighting.",
+    "specs": [],
+    "gallery": [
+      "/category-bedroom.jpg"
+    ]
+  }
+]
