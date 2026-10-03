@@ -229,9 +229,6 @@ export async function uploadImageServerAction(formData: FormData) {
       // Ignored if file write fails in serverless environments
     }
 
-    revalidatePath('/admin');
-    revalidatePath('/');
-
     return {
       success: true,
       url: publicUrl,
@@ -337,8 +334,7 @@ export async function deleteMediaServerAction(filename: string) {
     } catch {
       // Ignored
     }
-
-    revalidatePath('/admin');
+    revalidatePath('/');
     return { success: true, message: 'Image deleted from Supabase & Storage' };
   } catch (error: any) {
     return { success: false, message: error.message };
@@ -442,8 +438,6 @@ export async function saveBannerServerAction(bannerData: Partial<BannerItem>) {
         console.warn('[Supabase] Warning syncing banner:', e.message);
       }
     }
-
-    revalidatePath('/admin');
     revalidatePath('/');
 
     return { success: true, banner: updatedBanner, banners };
@@ -473,8 +467,6 @@ export async function deleteBannerServerAction(id: string) {
         await writeJsonFile(customerBannersPath, banners);
       }
     } catch {}
-
-    revalidatePath('/admin');
     revalidatePath('/');
 
     return { success: true, message: 'Banner deleted permanently from database and admin' };
@@ -609,8 +601,6 @@ export async function saveProjectServerAction(projectData: Partial<ProjectItem>)
         await writeJsonFile(customerProjectsPath, projects);
       }
     } catch {}
-
-    revalidatePath('/admin');
     revalidatePath('/');
     revalidatePath('/projects');
 
@@ -654,8 +644,6 @@ export async function deleteProjectServerAction(id: string | number) {
         await writeJsonFile(customerProjectsPath, projects);
       }
     } catch {}
-
-    revalidatePath('/admin');
     revalidatePath('/');
     revalidatePath('/projects');
 
@@ -747,8 +735,6 @@ export async function saveOfferServerAction(offerData: Partial<OfferItem>) {
         console.warn('[Supabase] Warning syncing offer:', e.message);
       }
     }
-
-    revalidatePath('/admin');
     revalidatePath('/');
 
     return { success: true, offer: updatedOffer, offers };
@@ -778,8 +764,7 @@ export async function deleteOfferServerAction(id: string) {
         await writeJsonFile(customerOffersPath, offers);
       }
     } catch {}
-
-    revalidatePath('/admin');
+    revalidatePath('/');
     return { success: true, message: 'Offer deleted permanently from database and admin' };
   } catch (error: any) {
     return { success: false, message: error.message };
@@ -920,8 +905,6 @@ export async function saveBlogServerAction(blogData: Partial<BlogArticle>) {
         console.warn('[Supabase] Warning syncing blog:', e.message);
       }
     }
-
-    revalidatePath('/admin');
     revalidatePath('/');
     revalidatePath('/blogs');
     revalidatePath(`/blogs/${updatedBlog.slug}`);
@@ -954,8 +937,6 @@ export async function deleteBlogServerAction(id: string) {
         await writeJsonFile(customerBlogsPath, blogs);
       }
     } catch {}
-
-    revalidatePath('/admin');
     revalidatePath('/');
     revalidatePath('/blogs');
     if (target?.slug) {
@@ -1052,8 +1033,6 @@ export async function saveTestimonialServerAction(testimonialData: Partial<Testi
         console.warn('[Supabase] Warning syncing testimonial:', e.message);
       }
     }
-
-    revalidatePath('/admin');
     revalidatePath('/');
 
     return { success: true, testimonial: updatedTestimonial, testimonials };
@@ -1083,8 +1062,6 @@ export async function deleteTestimonialServerAction(id: string) {
         await writeJsonFile(customerTestimonialsPath, testimonials);
       }
     } catch {}
-
-    revalidatePath('/admin');
     revalidatePath('/');
 
     return { success: true, message: 'Testimonial deleted permanently from database and admin' };
@@ -1178,8 +1155,6 @@ export async function saveVideoShowcaseServerAction(data: Partial<VideoShowcaseI
         console.warn('[Supabase] Warning syncing video showcase:', e.message);
       }
     }
-
-    revalidatePath('/admin');
     revalidatePath('/');
 
     return { success: true, video: updated };
