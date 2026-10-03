@@ -1558,8 +1558,9 @@ export default function AdminPage() {
                         <Link
                           href={`/blogs/${blog.slug}`}
                           target="_blank"
+                          prefetch={false}
                           className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
-                          title="Preview public article"
+                          title="Preview article"
                         >
                           <Eye className="w-3.5 h-3.5" />
                         </Link>
