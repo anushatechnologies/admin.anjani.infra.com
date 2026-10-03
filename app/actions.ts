@@ -170,7 +170,7 @@ export async function uploadImageServerAction(formData: FormData) {
     }
 
     // 1. Upload to Supabase Storage bucket 'anjani-media'
-    let publicUrl = `/uploads/${finalFilename}`;
+    let publicUrl = '';
     try {
       const { data: uploadData, error: uploadErr } = await supabaseAdmin.storage
         .from('anjani-media')
@@ -186,16 +186,31 @@ export async function uploadImageServerAction(formData: FormData) {
         publicUrl = urlData.publicUrl;
 
         // Save record to media_library table
-        await supabaseAdmin.from('media_library').insert({
-          filename: finalFilename,
-          file_url: publicUrl,
-          file_size: file.size,
-          mime_type: file.type,
-          storage_path: uploadData.path,
-        });
+        try {
+          await supabaseAdmin.from('media_library').insert({
+            filename: finalFilename,
+            file_url: publicUrl,
+            file_size: file.size,
+            mime_type: file.type,
+            storage_path: uploadData.path,
+          });
+        } catch (dbErr: any) {
+          console.warn('[Supabase] Warning recording media:', dbErr.message);
+        }
+      } else if (uploadErr) {
+        console.warn('[Supabase Storage] Upload error:', uploadErr.message);
       }
     } catch (e: any) {
       console.warn('[Supabase Storage] Notice:', e.message);
+    }
+
+    // Fallback if storage upload did not return URL
+    if (!publicUrl) {
+      if (buffer.length < 1024 * 1024) {
+        publicUrl = `data:${inferredMime};base64,${buffer.toString('base64')}`;
+      } else {
+        publicUrl = `/uploads/${finalFilename}`;
+      }
     }
 
     // 2. Backup to local uploads directory (and mirror to customer website)
