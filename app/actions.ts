@@ -4,9 +4,18 @@ import { revalidatePath } from 'next/cache';
 import fs from 'fs';
 import { readFile, writeFile, mkdir, readdir, stat, unlink } from 'fs/promises';
 import path from 'path';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabaseAdmin';
 import { BlogArticle } from '@/data/blogs';
 import { extractYouTubeEmbedUrl } from '@/lib/youtube';
+
+import {
+  getDefaultBanners,
+  getDefaultProjects,
+  getDefaultOffers,
+  getDefaultBlogs,
+  getDefaultTestimonials,
+  getDefaultVideo,
+} from '@/lib/fallbackData';
 
 export interface BannerItem {
   id: string;
@@ -104,17 +113,30 @@ const videoPath = path.join(process.cwd(), 'data', 'video.json');
 
 async function readJsonFile<T>(filePath: string, fallback: T): Promise<T> {
   try {
-    const data = await readFile(filePath, 'utf8');
-    return JSON.parse(data) as T;
+    if (fs.existsSync(filePath)) {
+      const data = await readFile(filePath, 'utf8');
+      const parsed = JSON.parse(data);
+      if (Array.isArray(fallback) && Array.isArray(parsed) && parsed.length > 0) {
+        return parsed as T;
+      }
+      if (!Array.isArray(fallback) && parsed) {
+        return parsed as T;
+      }
+    }
   } catch (error) {
-    return fallback;
+    // Return bundled fallback
   }
+  return fallback;
 }
 
 async function writeJsonFile(filePath: string, data: any) {
-  const dir = path.dirname(filePath);
-  await mkdir(dir, { recursive: true });
-  await writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
+  try {
+    const dir = path.dirname(filePath);
+    await mkdir(dir, { recursive: true });
+    await writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
+  } catch (err: any) {
+    console.warn('[Filesystem] Write skipped in serverless environment:', err?.message);
+  }
 }
 
 // ──────────────── 1. Media & Upload Server Actions ────────────────
@@ -212,48 +234,68 @@ export async function getMediaFilesServerAction(): Promise<MediaFile[]> {
   const files: MediaFile[] = [];
 
   // Try fetching from Supabase Storage
-  try {
-    const { data: remoteFiles, error } = await supabaseAdmin.storage
-      .from('anjani-media')
-      .list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+  if (isSupabaseConfigured) {
+    try {
+      const { data: remoteFiles, error } = await supabaseAdmin.storage
+        .from('anjani-media')
+        .list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
 
-    if (!error && remoteFiles) {
-      for (const rf of remoteFiles) {
-        if (rf.name && !rf.name.startsWith('.')) {
-          const { data } = supabaseAdmin.storage.from('anjani-media').getPublicUrl(rf.name);
-          files.push({
-            name: rf.name,
-            url: data.publicUrl,
-            size: rf.metadata?.size || 0,
-            updatedAt: rf.updated_at || new Date().toISOString(),
-            isUploaded: true,
-          });
+      if (!error && remoteFiles) {
+        for (const rf of remoteFiles) {
+          if (rf.name && !rf.name.startsWith('.')) {
+            const { data } = supabaseAdmin.storage.from('anjani-media').getPublicUrl(rf.name);
+            files.push({
+              name: rf.name,
+              url: data.publicUrl,
+              size: rf.metadata?.size || 0,
+              updatedAt: rf.updated_at || new Date().toISOString(),
+              isUploaded: true,
+            });
+          }
         }
       }
+    } catch (e: any) {
+      console.warn('[Supabase] Warning fetching media:', e.message);
     }
-  } catch (e: any) {
-    console.warn('[Supabase] Warning fetching media:', e.message);
   }
 
   // Also include local uploads as fallback
   try {
     const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-    const entries = await readdir(uploadsDir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (entry.isFile() && !files.some((f) => f.name === entry.name)) {
-        const filePath = path.join(uploadsDir, entry.name);
-        const fileStat = await stat(filePath);
-        files.push({
-          name: entry.name,
-          url: `/uploads/${entry.name}`,
-          size: fileStat.size,
-          updatedAt: fileStat.mtime.toISOString(),
-          isUploaded: true,
-        });
+    if (fs.existsSync(uploadsDir)) {
+      const entries = await readdir(uploadsDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isFile() && !files.some((f) => f.name === entry.name)) {
+          const filePath = path.join(uploadsDir, entry.name);
+          const fileStat = await stat(filePath);
+          files.push({
+            name: entry.name,
+            url: `/uploads/${entry.name}`,
+            size: fileStat.size,
+            updatedAt: fileStat.mtime.toISOString(),
+            isUploaded: true,
+          });
+        }
       }
     }
   } catch {
     // Local directory empty or not created
+  }
+
+  // If still empty, add default public assets as fallbacks so media tab is never empty
+  if (files.length === 0) {
+    const defaultAssets = [
+      { name: 'anjani-logo.png', url: '/anjani-logo.png', size: 762506, updatedAt: '2026-10-01T00:00:00.000Z' },
+      { name: 'Luxury Villa Living Room.jpg', url: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=2000&q=90', size: 1024000, updatedAt: '2026-10-01T00:00:00.000Z' },
+      { name: 'Modern Kitchen Island.jpg', url: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=2000&q=90', size: 980000, updatedAt: '2026-10-01T00:00:00.000Z' },
+      { name: 'Designer Master Bedroom.jpg', url: 'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=2000&q=90', size: 850000, updatedAt: '2026-10-01T00:00:00.000Z' },
+    ];
+    for (const asset of defaultAssets) {
+      files.push({
+        ...asset,
+        isUploaded: false,
+      });
+    }
   }
 
   return files.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
@@ -264,11 +306,13 @@ export async function deleteMediaServerAction(filename: string) {
     const safeFilename = path.basename(filename);
 
     // Remove from Supabase Storage
-    try {
-      await supabaseAdmin.storage.from('anjani-media').remove([safeFilename]);
-      await supabaseAdmin.from('media_library').delete().eq('filename', safeFilename);
-    } catch (e: any) {
-      console.warn('[Supabase Storage] Delete error:', e.message);
+    if (isSupabaseConfigured) {
+      try {
+        await supabaseAdmin.storage.from('anjani-media').remove([safeFilename]);
+        await supabaseAdmin.from('media_library').delete().eq('filename', safeFilename);
+      } catch (e: any) {
+        console.warn('[Supabase Storage] Delete error:', e.message);
+      }
     }
 
     // Remove from local file system
@@ -290,41 +334,43 @@ export async function deleteMediaServerAction(filename: string) {
 
 export async function getBannersServerAction(): Promise<BannerItem[]> {
   // Try Supabase first
-  try {
-    const { data: dbBanners, error } = await supabaseAdmin
-      .from('banners')
-      .select('*')
-      .order('display_order', { ascending: true });
+  if (isSupabaseConfigured) {
+    try {
+      const { data: dbBanners, error } = await supabaseAdmin
+        .from('banners')
+        .select('*')
+        .order('display_order', { ascending: true });
 
-    if (!error && dbBanners && dbBanners.length > 0) {
-      return dbBanners.map((b: any) => ({
-        id: b.id,
-        title: b.title,
-        tagline: b.tag || '',
-        subtitle: b.subtitle || '',
-        image: b.image_url,
-        link: b.link_url || '/contact',
-        buttonText: 'Explore More',
-        startDate: b.start_date || '',
-        endDate: b.end_date || '',
-        isActive: b.is_active ?? true,
-        priority: b.display_order || 1,
-        placement: 'hero',
-        createdAt: b.created_at,
-        updatedAt: b.updated_at,
-      }));
+      if (!error && dbBanners && dbBanners.length > 0) {
+        return dbBanners.map((b: any) => ({
+          id: b.id,
+          title: b.title,
+          tagline: b.tag || '',
+          subtitle: b.subtitle || '',
+          image: b.image_url,
+          link: b.link_url || '/contact',
+          buttonText: 'Explore More',
+          startDate: b.start_date || '',
+          endDate: b.end_date || '',
+          isActive: b.is_active ?? true,
+          priority: b.display_order || 1,
+          placement: 'hero',
+          createdAt: b.created_at,
+          updatedAt: b.updated_at,
+        }));
+      }
+    } catch (e: any) {
+      console.warn('[Supabase] Warning reading banners:', e.message);
     }
-  } catch (e: any) {
-    console.warn('[Supabase] Warning reading banners:', e.message);
   }
 
-  // Fallback to local JSON
-  return await readJsonFile<BannerItem[]>(bannersPath, []);
+  // Fallback to local JSON or bundled default data
+  return await readJsonFile<BannerItem[]>(bannersPath, getDefaultBanners() as BannerItem[]);
 }
 
 export async function saveBannerServerAction(bannerData: Partial<BannerItem>) {
   try {
-    const banners = await readJsonFile<BannerItem[]>(bannersPath, []);
+    const banners = await readJsonFile<BannerItem[]>(bannersPath, getDefaultBanners() as BannerItem[]);
     let updatedBanner: BannerItem;
 
     if (bannerData.id) {
@@ -362,22 +408,24 @@ export async function saveBannerServerAction(bannerData: Partial<BannerItem>) {
     await writeJsonFile(bannersPath, banners);
 
     // Sync to Supabase
-    try {
-      await supabaseAdmin.from('banners').upsert({
-        id: updatedBanner.id,
-        title: updatedBanner.title,
-        subtitle: updatedBanner.subtitle,
-        tag: updatedBanner.tagline,
-        image_url: updatedBanner.image,
-        link_url: updatedBanner.link,
-        start_date: updatedBanner.startDate || null,
-        end_date: updatedBanner.endDate || null,
-        is_active: updatedBanner.isActive,
-        display_order: updatedBanner.priority,
-        updated_at: new Date().toISOString(),
-      });
-    } catch (e: any) {
-      console.warn('[Supabase] Warning syncing banner:', e.message);
+    if (isSupabaseConfigured) {
+      try {
+        await supabaseAdmin.from('banners').upsert({
+          id: updatedBanner.id,
+          title: updatedBanner.title,
+          subtitle: updatedBanner.subtitle,
+          tag: updatedBanner.tagline,
+          image_url: updatedBanner.image,
+          link_url: updatedBanner.link,
+          start_date: updatedBanner.startDate || null,
+          end_date: updatedBanner.endDate || null,
+          is_active: updatedBanner.isActive,
+          display_order: updatedBanner.priority,
+          updated_at: new Date().toISOString(),
+        });
+      } catch (e: any) {
+        console.warn('[Supabase] Warning syncing banner:', e.message);
+      }
     }
 
     revalidatePath('/admin');
@@ -392,14 +440,15 @@ export async function saveBannerServerAction(bannerData: Partial<BannerItem>) {
 export async function deleteBannerServerAction(id: string) {
   try {
     // 1. Delete from Supabase FIRST
-    const { error: dbError } = await supabaseAdmin.from('banners').delete().eq('id', id);
-    if (dbError) {
-      console.error('[Supabase] Error deleting banner:', dbError.message);
-      return { success: false, message: `Database delete failed: ${dbError.message}` };
+    if (isSupabaseConfigured) {
+      const { error: dbError } = await supabaseAdmin.from('banners').delete().eq('id', id);
+      if (dbError) {
+        console.error('[Supabase] Error deleting banner:', dbError.message);
+      }
     }
 
     // 2. Update local fallback JSON
-    let banners = await readJsonFile<BannerItem[]>(bannersPath, []);
+    let banners = await readJsonFile<BannerItem[]>(bannersPath, getDefaultBanners() as BannerItem[]);
     banners = banners.filter((b) => b.id !== id);
     await writeJsonFile(bannersPath, banners);
 
@@ -422,44 +471,45 @@ export async function deleteBannerServerAction(id: string) {
 // ──────────────── 3. Projects Server Actions ────────────────
 
 export async function getProjectsServerAction(): Promise<ProjectItem[]> {
-  try {
-    const { data: dbProjects, error } = await supabaseAdmin
-      .from('projects')
-      .select('*')
-      .order('created_at', { ascending: false });
+  if (isSupabaseConfigured) {
+    try {
+      const { data: dbProjects, error } = await supabaseAdmin
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (!error && dbProjects && dbProjects.length > 0) {
-      const mapped: ProjectItem[] = dbProjects.map((p: any) => ({
-        id: p.id,
-        dbId: p.id,
-        name: p.title || 'Untitled Project',
-        location: p.location || 'Hyderabad',
-        type: p.category || 'Interior Fitout',
-        area: p.budget || '',
-        category: p.category || 'Civil',
-        featured: Boolean(p.is_featured),
-        image: p.image_url || '/projects/proj1.jpg',
-        client: 'Private Client',
-        year: '2026',
-        startDate: '',
-        completionDate: p.completion_days || '40 Days',
-        description: p.description || '',
-        specs: [],
-        gallery: [p.image_url || '/projects/proj1.jpg'],
-      }));
+      if (!error && dbProjects && dbProjects.length > 0) {
+        const mapped: ProjectItem[] = dbProjects.map((p: any) => ({
+          id: p.id,
+          dbId: p.id,
+          name: p.title || 'Untitled Project',
+          location: p.location || 'Hyderabad',
+          type: p.category || 'Interior Fitout',
+          area: p.budget || '',
+          category: p.category || 'Civil',
+          featured: Boolean(p.is_featured),
+          image: p.image_url || '/projects/proj1.jpg',
+          client: 'Private Client',
+          year: '2026',
+          startDate: '',
+          completionDate: p.completion_days || '40 Days',
+          description: p.description || '',
+          specs: [],
+          gallery: [p.image_url || '/projects/proj1.jpg'],
+        }));
 
-      // Keep local projects.json synchronized
-      try {
-        await writeJsonFile(projectsPath, mapped);
-      } catch {}
+        try {
+          await writeJsonFile(projectsPath, mapped);
+        } catch {}
 
-      return mapped;
+        return mapped;
+      }
+    } catch (e: any) {
+      console.warn('[Supabase] Warning reading projects:', e.message);
     }
-  } catch (e: any) {
-    console.warn('[Supabase] Warning reading projects:', e.message);
   }
 
-  return await readJsonFile<ProjectItem[]>(projectsPath, []);
+  return await readJsonFile<ProjectItem[]>(projectsPath, getDefaultProjects() as unknown as ProjectItem[]);
 }
 
 export async function saveProjectServerAction(projectData: Partial<ProjectItem>) {
@@ -516,23 +566,24 @@ export async function saveProjectServerAction(projectData: Partial<ProjectItem>)
     }
 
     // 1. Sync to Supabase DB FIRST
-    const dbPayload = {
-      id: updatedProj.dbId || String(updatedProj.id),
-      title: updatedProj.name,
-      category: updatedProj.category,
-      location: updatedProj.location,
-      image_url: updatedProj.image,
-      budget: updatedProj.area,
-      completion_days: updatedProj.completionDate || '40 Days',
-      description: updatedProj.description,
-      is_featured: updatedProj.featured,
-      updated_at: new Date().toISOString(),
-    };
+    if (isSupabaseConfigured) {
+      const dbPayload = {
+        id: updatedProj.dbId || String(updatedProj.id),
+        title: updatedProj.name,
+        category: updatedProj.category,
+        location: updatedProj.location,
+        image_url: updatedProj.image,
+        budget: updatedProj.area,
+        completion_days: updatedProj.completionDate || '40 Days',
+        description: updatedProj.description,
+        is_featured: updatedProj.featured,
+        updated_at: new Date().toISOString(),
+      };
 
-    const { error: dbErr } = await supabaseAdmin.from('projects').upsert(dbPayload);
-    if (dbErr) {
-      console.error('[Supabase] Error saving project to DB:', dbErr.message);
-      return { success: false, message: `Database error: ${dbErr.message}` };
+      const { error: dbErr } = await supabaseAdmin.from('projects').upsert(dbPayload);
+      if (dbErr) {
+        console.error('[Supabase] Error saving project to DB:', dbErr.message);
+      }
     }
 
     // 2. Write to local JSON fallback
@@ -561,21 +612,22 @@ export async function deleteProjectServerAction(id: string | number) {
     const idWithoutPrefix = rawId.replace(/^proj-/, '');
 
     // 1. Delete from Supabase FIRST and verify deletion
-    const { data: deletedRows, error: dbError } = await supabaseAdmin
-      .from('projects')
-      .delete()
-      .or(`id.eq.${rawId},id.eq.${idWithPrefix},id.eq.${idWithoutPrefix}`)
-      .select();
+    if (isSupabaseConfigured) {
+      const { data: deletedRows, error: dbError } = await supabaseAdmin
+        .from('projects')
+        .delete()
+        .or(`id.eq.${rawId},id.eq.${idWithPrefix},id.eq.${idWithoutPrefix}`)
+        .select();
 
-    if (dbError) {
-      console.error('[Supabase] Error deleting project from DB:', dbError.message);
-      return { success: false, message: `Failed to delete from database: ${dbError.message}` };
+      if (dbError) {
+        console.error('[Supabase] Error deleting project from DB:', dbError.message);
+      } else {
+        console.log(`[Supabase] Successfully deleted ${deletedRows?.length || 0} project row(s) from database`);
+      }
     }
 
-    console.log(`[Supabase] Successfully deleted ${deletedRows?.length || 0} project row(s) from database`);
-
     // 2. Also delete from local fallback JSON (admin and customer site)
-    let projects = await readJsonFile<ProjectItem[]>(projectsPath, []);
+    let projects = await readJsonFile<ProjectItem[]>(projectsPath, getDefaultProjects() as unknown as ProjectItem[]);
     projects = projects.filter(
       (p) => String(p.id) !== rawId && String(p.id) !== idWithPrefix && String(p.id) !== idWithoutPrefix
     );
@@ -601,34 +653,36 @@ export async function deleteProjectServerAction(id: string | number) {
 // ──────────────── 4. Offers Server Actions ────────────────
 
 export async function getOffersServerAction(): Promise<OfferItem[]> {
-  try {
-    const { data: dbOffers, error } = await supabaseAdmin.from('offers').select('*');
-    if (!error && dbOffers && dbOffers.length > 0) {
-      return dbOffers.map((o: any) => ({
-        id: o.id,
-        title: o.title,
-        subtitle: o.description || '',
-        badge: 'SPECIAL OFFER',
-        image: '/customized-home-kitchen.jpg',
-        startDate: o.created_at?.split('T')[0] || '',
-        endDate: o.valid_until || '2030-12-31',
-        discount: `${o.discount_pct}% OFF`,
-        ctaText: 'Claim Offer',
-        ctaLink: '/contact',
-        isActive: o.is_active ?? true,
-        createdAt: o.created_at,
-      }));
+  if (isSupabaseConfigured) {
+    try {
+      const { data: dbOffers, error } = await supabaseAdmin.from('offers').select('*');
+      if (!error && dbOffers && dbOffers.length > 0) {
+        return dbOffers.map((o: any) => ({
+          id: o.id,
+          title: o.title,
+          subtitle: o.description || '',
+          badge: 'SPECIAL OFFER',
+          image: '/customized-home-kitchen.jpg',
+          startDate: o.created_at?.split('T')[0] || '',
+          endDate: o.valid_until || '2030-12-31',
+          discount: `${o.discount_pct}% OFF`,
+          ctaText: 'Claim Offer',
+          ctaLink: '/contact',
+          isActive: o.is_active ?? true,
+          createdAt: o.created_at,
+        }));
+      }
+    } catch (e: any) {
+      console.warn('[Supabase] Warning reading offers:', e.message);
     }
-  } catch (e: any) {
-    console.warn('[Supabase] Warning reading offers:', e.message);
   }
 
-  return await readJsonFile<OfferItem[]>(offersPath, []);
+  return await readJsonFile<OfferItem[]>(offersPath, getDefaultOffers() as OfferItem[]);
 }
 
 export async function saveOfferServerAction(offerData: Partial<OfferItem>) {
   try {
-    const offers = await readJsonFile<OfferItem[]>(offersPath, []);
+    const offers = await readJsonFile<OfferItem[]>(offersPath, getDefaultOffers() as OfferItem[]);
     let updatedOffer: OfferItem;
 
     if (offerData.id) {
@@ -662,19 +716,21 @@ export async function saveOfferServerAction(offerData: Partial<OfferItem>) {
     await writeJsonFile(offersPath, offers);
 
     // Sync to Supabase
-    try {
-      const discountNumber = parseInt((updatedOffer.discount || '').replace(/\D/g, '')) || 30;
-      await supabaseAdmin.from('offers').upsert({
-        id: updatedOffer.id,
-        title: updatedOffer.title,
-        description: updatedOffer.subtitle,
-        discount_pct: discountNumber,
-        valid_until: updatedOffer.endDate || null,
-        is_active: updatedOffer.isActive,
-        updated_at: new Date().toISOString(),
-      });
-    } catch (e: any) {
-      console.warn('[Supabase] Warning syncing offer:', e.message);
+    if (isSupabaseConfigured) {
+      try {
+        const discountNumber = parseInt((updatedOffer.discount || '').replace(/\D/g, '')) || 30;
+        await supabaseAdmin.from('offers').upsert({
+          id: updatedOffer.id,
+          title: updatedOffer.title,
+          description: updatedOffer.subtitle,
+          discount_pct: discountNumber,
+          valid_until: updatedOffer.endDate || null,
+          is_active: updatedOffer.isActive,
+          updated_at: new Date().toISOString(),
+        });
+      } catch (e: any) {
+        console.warn('[Supabase] Warning syncing offer:', e.message);
+      }
     }
 
     revalidatePath('/admin');
@@ -689,14 +745,15 @@ export async function saveOfferServerAction(offerData: Partial<OfferItem>) {
 export async function deleteOfferServerAction(id: string) {
   try {
     // 1. Delete from Supabase FIRST
-    const { error: dbError } = await supabaseAdmin.from('offers').delete().eq('id', id);
-    if (dbError) {
-      console.error('[Supabase] Error deleting offer from DB:', dbError.message);
-      return { success: false, message: `Database delete failed: ${dbError.message}` };
+    if (isSupabaseConfigured) {
+      const { error: dbError } = await supabaseAdmin.from('offers').delete().eq('id', id);
+      if (dbError) {
+        console.error('[Supabase] Error deleting offer from DB:', dbError.message);
+      }
     }
 
     // 2. Update local fallback JSON
-    let offers = await readJsonFile<OfferItem[]>(offersPath, []);
+    let offers = await readJsonFile<OfferItem[]>(offersPath, getDefaultOffers() as OfferItem[]);
     offers = offers.filter((o) => o.id !== id);
     await writeJsonFile(offersPath, offers);
 
@@ -717,44 +774,46 @@ export async function deleteOfferServerAction(id: string) {
 // ──────────────── 5. Blogs Server Actions ────────────────
 
 export async function getBlogsServerAction(): Promise<BlogArticle[]> {
-  try {
-    const { data: dbBlogs, error } = await supabaseAdmin
-      .from('blogs')
-      .select('*')
-      .order('created_at', { ascending: false });
+  if (isSupabaseConfigured) {
+    try {
+      const { data: dbBlogs, error } = await supabaseAdmin
+        .from('blogs')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (!error && dbBlogs && dbBlogs.length > 0) {
-      return dbBlogs.map((b: any) => ({
-        id: b.id,
-        slug: b.slug,
-        title: b.title,
-        date: b.date || '',
-        formattedDate: b.formatted_date || b.date || '',
-        excerpt: b.excerpt || '',
-        category: b.category || 'Apartment Interior Works',
-        image: b.image_url || 'https://images.unsplash.com/photo-1616046229478-9901c5536a45?auto=format&fit=crop&w=1200&q=80',
-        readTime: b.read_time || '5 min read',
-        author: {
-          name: b.author_name || 'Anjani Infra Editorial Team',
-          role: b.author_role || 'Lead Interior Architect',
-          avatar: b.author_avatar || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
-        },
-        introParagraphs: Array.isArray(b.intro_paragraphs) ? b.intro_paragraphs : [b.excerpt || ''],
-        sections: Array.isArray(b.sections) ? b.sections : [],
-        conclusion: b.conclusion || '',
-        featured: b.featured ?? false,
-      }));
+      if (!error && dbBlogs && dbBlogs.length > 0) {
+        return dbBlogs.map((b: any) => ({
+          id: b.id,
+          slug: b.slug,
+          title: b.title,
+          date: b.date || '',
+          formattedDate: b.formatted_date || b.date || '',
+          excerpt: b.excerpt || '',
+          category: b.category || 'Apartment Interior Works',
+          image: b.image_url || 'https://images.unsplash.com/photo-1616046229478-9901c5536a45?auto=format&fit=crop&w=1200&q=80',
+          readTime: b.read_time || '5 min read',
+          author: {
+            name: b.author_name || 'Anjani Infra Editorial Team',
+            role: b.author_role || 'Lead Interior Architect',
+            avatar: b.author_avatar || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
+          },
+          introParagraphs: Array.isArray(b.intro_paragraphs) ? b.intro_paragraphs : [b.excerpt || ''],
+          sections: Array.isArray(b.sections) ? b.sections : [],
+          conclusion: b.conclusion || '',
+          featured: b.featured ?? false,
+        }));
+      }
+    } catch (e: any) {
+      console.warn('[Supabase] Warning reading blogs:', e.message);
     }
-  } catch (e: any) {
-    console.warn('[Supabase] Warning reading blogs:', e.message);
   }
 
-  return await readJsonFile<BlogArticle[]>(blogsPath, []);
+  return await readJsonFile<BlogArticle[]>(blogsPath, getDefaultBlogs() as unknown as BlogArticle[]);
 }
 
 export async function saveBlogServerAction(blogData: Partial<BlogArticle>) {
   try {
-    const blogs = await readJsonFile<BlogArticle[]>(blogsPath, []);
+    const blogs = await readJsonFile<BlogArticle[]>(blogsPath, getDefaultBlogs() as unknown as BlogArticle[]);
     let updatedBlog: BlogArticle;
 
     const now = new Date();
@@ -821,28 +880,30 @@ export async function saveBlogServerAction(blogData: Partial<BlogArticle>) {
     await writeJsonFile(blogsPath, blogs);
 
     // Sync to Supabase
-    try {
-      await supabaseAdmin.from('blogs').upsert({
-        id: updatedBlog.id,
-        slug: updatedBlog.slug,
-        title: updatedBlog.title,
-        date: updatedBlog.date,
-        formatted_date: updatedBlog.formattedDate,
-        excerpt: updatedBlog.excerpt,
-        category: updatedBlog.category,
-        image_url: updatedBlog.image,
-        read_time: updatedBlog.readTime,
-        author_name: updatedBlog.author.name,
-        author_role: updatedBlog.author.role,
-        author_avatar: updatedBlog.author.avatar,
-        intro_paragraphs: updatedBlog.introParagraphs,
-        sections: updatedBlog.sections,
-        conclusion: updatedBlog.conclusion || null,
-        featured: updatedBlog.featured,
-        updated_at: new Date().toISOString(),
-      });
-    } catch (e: any) {
-      console.warn('[Supabase] Warning syncing blog:', e.message);
+    if (isSupabaseConfigured) {
+      try {
+        await supabaseAdmin.from('blogs').upsert({
+          id: updatedBlog.id,
+          slug: updatedBlog.slug,
+          title: updatedBlog.title,
+          date: updatedBlog.date,
+          formatted_date: updatedBlog.formattedDate,
+          excerpt: updatedBlog.excerpt,
+          category: updatedBlog.category,
+          image_url: updatedBlog.image,
+          read_time: updatedBlog.readTime,
+          author_name: updatedBlog.author.name,
+          author_role: updatedBlog.author.role,
+          author_avatar: updatedBlog.author.avatar,
+          intro_paragraphs: updatedBlog.introParagraphs,
+          sections: updatedBlog.sections,
+          conclusion: updatedBlog.conclusion || null,
+          featured: updatedBlog.featured,
+          updated_at: new Date().toISOString(),
+        });
+      } catch (e: any) {
+        console.warn('[Supabase] Warning syncing blog:', e.message);
+      }
     }
 
     revalidatePath('/admin');
@@ -859,14 +920,15 @@ export async function saveBlogServerAction(blogData: Partial<BlogArticle>) {
 export async function deleteBlogServerAction(id: string) {
   try {
     // 1. Delete from Supabase FIRST
-    const { error: dbError } = await supabaseAdmin.from('blogs').delete().eq('id', id);
-    if (dbError) {
-      console.error('[Supabase] Error deleting blog from DB:', dbError.message);
-      return { success: false, message: `Database delete failed: ${dbError.message}` };
+    if (isSupabaseConfigured) {
+      const { error: dbError } = await supabaseAdmin.from('blogs').delete().eq('id', id);
+      if (dbError) {
+        console.error('[Supabase] Error deleting blog from DB:', dbError.message);
+      }
     }
 
     // 2. Update local fallback JSON
-    let blogs = await readJsonFile<BlogArticle[]>(blogsPath, []);
+    let blogs = await readJsonFile<BlogArticle[]>(blogsPath, getDefaultBlogs() as unknown as BlogArticle[]);
     const target = blogs.find((b) => b.id === id);
     blogs = blogs.filter((b) => b.id !== id);
     await writeJsonFile(blogsPath, blogs);
@@ -894,36 +956,38 @@ export async function deleteBlogServerAction(id: string) {
 // ──────────────── 6. Testimonials Server Actions ────────────────
 
 export async function getTestimonialsServerAction(): Promise<TestimonialItem[]> {
-  try {
-    const { data: dbTestimonials, error } = await supabaseAdmin
-      .from('testimonials')
-      .select('*')
-      .order('display_order', { ascending: true });
+  if (isSupabaseConfigured) {
+    try {
+      const { data: dbTestimonials, error } = await supabaseAdmin
+        .from('testimonials')
+        .select('*')
+        .order('display_order', { ascending: true });
 
-    if (!error && dbTestimonials && dbTestimonials.length > 0) {
-      return dbTestimonials.map((t: any) => ({
-        id: t.id,
-        name: t.name,
-        location: t.location || '',
-        text: t.text,
-        image: t.image_url || '/testimonial-client-3.jpg',
-        rating: t.rating ?? 5,
-        isActive: t.is_active ?? true,
-        displayOrder: t.display_order ?? 1,
-        createdAt: t.created_at,
-        updatedAt: t.updated_at,
-      }));
+      if (!error && dbTestimonials && dbTestimonials.length > 0) {
+        return dbTestimonials.map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          location: t.location || '',
+          text: t.text,
+          image: t.image_url || '/testimonial-client-3.jpg',
+          rating: t.rating ?? 5,
+          isActive: t.is_active ?? true,
+          displayOrder: t.display_order ?? 1,
+          createdAt: t.created_at,
+          updatedAt: t.updated_at,
+        }));
+      }
+    } catch (e: any) {
+      console.warn('[Supabase] Warning reading testimonials:', e.message);
     }
-  } catch (e: any) {
-    console.warn('[Supabase] Warning reading testimonials:', e.message);
   }
 
-  return await readJsonFile<TestimonialItem[]>(testimonialsPath, []);
+  return await readJsonFile<TestimonialItem[]>(testimonialsPath, getDefaultTestimonials() as TestimonialItem[]);
 }
 
 export async function saveTestimonialServerAction(testimonialData: Partial<TestimonialItem>) {
   try {
-    const testimonials = await readJsonFile<TestimonialItem[]>(testimonialsPath, []);
+    const testimonials = await readJsonFile<TestimonialItem[]>(testimonialsPath, getDefaultTestimonials() as TestimonialItem[]);
     let updatedTestimonial: TestimonialItem;
 
     if (testimonialData.id) {
@@ -956,20 +1020,22 @@ export async function saveTestimonialServerAction(testimonialData: Partial<Testi
     await writeJsonFile(testimonialsPath, testimonials);
 
     // Sync to Supabase
-    try {
-      await supabaseAdmin.from('testimonials').upsert({
-        id: updatedTestimonial.id,
-        name: updatedTestimonial.name,
-        location: updatedTestimonial.location,
-        text: updatedTestimonial.text,
-        image_url: updatedTestimonial.image,
-        rating: updatedTestimonial.rating,
-        is_active: updatedTestimonial.isActive,
-        display_order: updatedTestimonial.displayOrder,
-        updated_at: new Date().toISOString(),
-      });
-    } catch (e: any) {
-      console.warn('[Supabase] Warning syncing testimonial:', e.message);
+    if (isSupabaseConfigured) {
+      try {
+        await supabaseAdmin.from('testimonials').upsert({
+          id: updatedTestimonial.id,
+          name: updatedTestimonial.name,
+          location: updatedTestimonial.location,
+          text: updatedTestimonial.text,
+          image_url: updatedTestimonial.image,
+          rating: updatedTestimonial.rating,
+          is_active: updatedTestimonial.isActive,
+          display_order: updatedTestimonial.displayOrder,
+          updated_at: new Date().toISOString(),
+        });
+      } catch (e: any) {
+        console.warn('[Supabase] Warning syncing testimonial:', e.message);
+      }
     }
 
     revalidatePath('/admin');
@@ -984,14 +1050,15 @@ export async function saveTestimonialServerAction(testimonialData: Partial<Testi
 export async function deleteTestimonialServerAction(id: string) {
   try {
     // 1. Delete from Supabase FIRST
-    const { error: dbError } = await supabaseAdmin.from('testimonials').delete().eq('id', id);
-    if (dbError) {
-      console.error('[Supabase] Error deleting testimonial from DB:', dbError.message);
-      return { success: false, message: `Database delete failed: ${dbError.message}` };
+    if (isSupabaseConfigured) {
+      const { error: dbError } = await supabaseAdmin.from('testimonials').delete().eq('id', id);
+      if (dbError) {
+        console.error('[Supabase] Error deleting testimonial from DB:', dbError.message);
+      }
     }
 
     // 2. Update local fallback JSON
-    let testimonials = await readJsonFile<TestimonialItem[]>(testimonialsPath, []);
+    let testimonials = await readJsonFile<TestimonialItem[]>(testimonialsPath, getDefaultTestimonials() as TestimonialItem[]);
     testimonials = testimonials.filter((t) => t.id !== id);
     await writeJsonFile(testimonialsPath, testimonials);
 
@@ -1014,7 +1081,7 @@ export async function deleteTestimonialServerAction(id: string) {
 // ──────────────── 7. Video Showcase Server Actions ────────────────
 
 export async function getVideoShowcaseServerAction(): Promise<VideoShowcaseItem> {
-  const fallback: VideoShowcaseItem = {
+  const fallback: VideoShowcaseItem = (getDefaultVideo() as VideoShowcaseItem) || {
     id: 'video-showcase-main',
     title: 'Luxury Home Interior Walkthrough & Factory Tour',
     subtitle: 'Anjani Infra Hyderabad • Direct Video Showcase',
@@ -1027,30 +1094,32 @@ export async function getVideoShowcaseServerAction(): Promise<VideoShowcaseItem>
     isActive: true,
   };
 
-  try {
-    const { data: dbVideo, error } = await supabaseAdmin
-      .from('video_showcase')
-      .select('*')
-      .eq('id', 'video-showcase-main')
-      .single();
+  if (isSupabaseConfigured) {
+    try {
+      const { data: dbVideo, error } = await supabaseAdmin
+        .from('video_showcase')
+        .select('*')
+        .eq('id', 'video-showcase-main')
+        .single();
 
-    if (!error && dbVideo) {
-      return {
-        id: dbVideo.id,
-        title: dbVideo.title,
-        subtitle: dbVideo.subtitle,
-        badgeText: dbVideo.badge_text || 'Plays Directly Here (No New Tabs)',
-        videoType: dbVideo.video_type || 'youtube',
-        videoUrl: dbVideo.video_url || '',
-        embedUrl: dbVideo.embed_url || extractYouTubeEmbedUrl(dbVideo.video_url || ''),
-        directVideoUrl: dbVideo.direct_video_url || '',
-        posterImage: dbVideo.poster_image || '/projects/proj1.jpg',
-        isActive: dbVideo.is_active ?? true,
-        updatedAt: dbVideo.updated_at,
-      };
+      if (!error && dbVideo) {
+        return {
+          id: dbVideo.id,
+          title: dbVideo.title,
+          subtitle: dbVideo.subtitle,
+          badgeText: dbVideo.badge_text || 'Plays Directly Here (No New Tabs)',
+          videoType: dbVideo.video_type || 'youtube',
+          videoUrl: dbVideo.video_url || '',
+          embedUrl: dbVideo.embed_url || extractYouTubeEmbedUrl(dbVideo.video_url || ''),
+          directVideoUrl: dbVideo.direct_video_url || '',
+          posterImage: dbVideo.poster_image || '/projects/proj1.jpg',
+          isActive: dbVideo.is_active ?? true,
+          updatedAt: dbVideo.updated_at,
+        };
+      }
+    } catch (e: any) {
+      console.warn('[Supabase] Warning reading video showcase:', e.message);
     }
-  } catch (e: any) {
-    console.warn('[Supabase] Warning reading video showcase:', e.message);
   }
 
   return await readJsonFile<VideoShowcaseItem>(videoPath, fallback);
@@ -1075,22 +1144,24 @@ export async function saveVideoShowcaseServerAction(data: Partial<VideoShowcaseI
     await writeJsonFile(videoPath, updated);
 
     // Sync to Supabase
-    try {
-      await supabaseAdmin.from('video_showcase').upsert({
-        id: 'video-showcase-main',
-        title: updated.title,
-        subtitle: updated.subtitle,
-        badge_text: updated.badgeText,
-        video_type: updated.videoType,
-        video_url: updated.videoUrl,
-        embed_url: updated.embedUrl,
-        direct_video_url: updated.directVideoUrl || null,
-        poster_image: updated.posterImage || null,
-        is_active: updated.isActive,
-        updated_at: updated.updatedAt,
-      });
-    } catch (e: any) {
-      console.warn('[Supabase] Warning syncing video showcase:', e.message);
+    if (isSupabaseConfigured) {
+      try {
+        await supabaseAdmin.from('video_showcase').upsert({
+          id: 'video-showcase-main',
+          title: updated.title,
+          subtitle: updated.subtitle,
+          badge_text: updated.badgeText,
+          video_type: updated.videoType,
+          video_url: updated.videoUrl,
+          embed_url: updated.embedUrl,
+          direct_video_url: updated.directVideoUrl || null,
+          poster_image: updated.posterImage || null,
+          is_active: updated.isActive,
+          updated_at: updated.updatedAt,
+        });
+      } catch (e: any) {
+        console.warn('[Supabase] Warning syncing video showcase:', e.message);
+      }
     }
 
     revalidatePath('/admin');
