@@ -2121,8 +2121,13 @@ export default function AdminPage() {
                       accept="image/*"
                       onChange={async e => {
                         if (e.target.files && e.target.files[0]) {
-                          const url = await handleServerUpload(e.target.files[0]);
-                          if (url) setBannerForm({ ...bannerForm, image: url });
+                          const file = e.target.files[0];
+                          const previewUrl = URL.createObjectURL(file);
+                          setBannerForm(prev => ({ ...prev, image: previewUrl }));
+                          const url = await handleServerUpload(file);
+                          if (url) {
+                            setBannerForm(prev => ({ ...prev, image: url }));
+                          }
                         }
                       }}
                       className="hidden"
@@ -2268,8 +2273,13 @@ export default function AdminPage() {
                       accept="image/*"
                       onChange={async e => {
                         if (e.target.files && e.target.files[0]) {
-                          const url = await handleServerUpload(e.target.files[0]);
-                          if (url) setOfferForm({ ...offerForm, image: url });
+                          const file = e.target.files[0];
+                          const previewUrl = URL.createObjectURL(file);
+                          setOfferForm(prev => ({ ...prev, image: previewUrl }));
+                          const url = await handleServerUpload(file);
+                          if (url) {
+                            setOfferForm(prev => ({ ...prev, image: url }));
+                          }
                         }
                       }}
                       className="hidden"
@@ -2418,8 +2428,13 @@ export default function AdminPage() {
                       accept="image/*"
                       onChange={async e => {
                         if (e.target.files && e.target.files[0]) {
-                          const url = await handleServerUpload(e.target.files[0]);
-                          if (url) setBlogForm({ ...blogForm, image: url });
+                          const file = e.target.files[0];
+                          const previewUrl = URL.createObjectURL(file);
+                          setBlogForm(prev => ({ ...prev, image: previewUrl }));
+                          const url = await handleServerUpload(file);
+                          if (url) {
+                            setBlogForm(prev => ({ ...prev, image: url }));
+                          }
                         }
                       }}
                       className="hidden"
