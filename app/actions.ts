@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import fs from 'fs';
 import { readFile, writeFile, mkdir, readdir, stat, unlink } from 'fs/promises';
 import path from 'path';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
