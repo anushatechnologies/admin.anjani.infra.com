@@ -24,6 +24,9 @@ import {
   MessageSquareQuote,
   Star,
   Video,
+  Music,
+  Play,
+  Film,
   X,
   LogOut
 } from 'lucide-react';
@@ -88,6 +91,7 @@ export default function AdminPage() {
   const [loadingMedia, setLoadingMedia] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [mediaSearch, setMediaSearch] = useState('');
+  const [mediaTypeFilter, setMediaTypeFilter] = useState<'all' | 'images' | 'audio-video'>('all');
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
   // Projects State
@@ -799,9 +803,27 @@ export default function AdminPage() {
     });
   };
 
-  const filteredMedia = mediaFiles.filter(f =>
-    f.name.toLowerCase().includes(mediaSearch.toLowerCase())
-  );
+  const isAudioFile = (filename: string, url: string) => {
+    const lower = (filename + ' ' + url).toLowerCase();
+    return lower.includes('audio') || /\.(mp3|wav|aac|m4a|ogg)(\?.*)?$/i.test(lower);
+  };
+
+  const isVideoFile = (filename: string, url: string) => {
+    const lower = (filename + ' ' + url).toLowerCase();
+    return !isAudioFile(filename, url) && /\.(mp4|webm|mov|m4v|mkv)(\?.*)?$/i.test(lower);
+  };
+
+  const isImageFile = (filename: string, url: string) => {
+    return !isAudioFile(filename, url) && !isVideoFile(filename, url);
+  };
+
+  const filteredMedia = mediaFiles.filter(f => {
+    const matchesSearch = f.name.toLowerCase().includes(mediaSearch.toLowerCase());
+    if (!matchesSearch) return false;
+    if (mediaTypeFilter === 'images') return isImageFile(f.name, f.url);
+    if (mediaTypeFilter === 'audio-video') return isAudioFile(f.name, f.url) || isVideoFile(f.name, f.url);
+    return true;
+  });
 
   const filteredBlogs = blogs.filter(b => {
     const matchesSearch =
@@ -1218,15 +1240,55 @@ export default function AdminPage() {
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-4 bg-[#121c27] p-4 rounded-xl border border-slate-800">
-              <div className="flex items-center gap-2 flex-1 max-w-md bg-slate-900 px-3 py-2 rounded-lg border border-slate-800">
-                <Search className="w-4 h-4 text-slate-500" />
-                <input
-                  type="text"
-                  placeholder="Search uploaded files..."
-                  value={mediaSearch}
-                  onChange={e => setMediaSearch(e.target.value)}
-                  className="bg-transparent text-xs text-white placeholder-slate-500 outline-none w-full"
-                />
+              <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
+                <div className="flex items-center gap-2 flex-1 max-w-md bg-slate-900 px-3 py-2 rounded-lg border border-slate-800">
+                  <Search className="w-4 h-4 text-slate-500" />
+                  <input
+                    type="text"
+                    placeholder="Search uploaded files..."
+                    value={mediaSearch}
+                    onChange={e => setMediaSearch(e.target.value)}
+                    className="bg-transparent text-xs text-white placeholder-slate-500 outline-none w-full"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-lg border border-slate-800 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setMediaTypeFilter('all')}
+                    className={`px-3 py-1.5 rounded-md font-medium transition ${
+                      mediaTypeFilter === 'all'
+                        ? 'bg-[#C5A059] text-slate-950 font-bold'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    All ({mediaFiles.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMediaTypeFilter('images')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition ${
+                      mediaTypeFilter === 'images'
+                        ? 'bg-[#C5A059] text-slate-950 font-bold'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <ImageIcon className="w-3.5 h-3.5" />
+                    Images ({mediaFiles.filter(f => isImageFile(f.name, f.url)).length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMediaTypeFilter('audio-video')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition ${
+                      mediaTypeFilter === 'audio-video'
+                        ? 'bg-[#C5A059] text-slate-950 font-bold'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Film className="w-3.5 h-3.5" />
+                    Audio & Video ({mediaFiles.filter(f => !isImageFile(f.name, f.url)).length})
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center gap-3">
@@ -1244,7 +1306,7 @@ export default function AdminPage() {
                   <input
                     type="file"
                     multiple
-                    accept="image/*"
+                    accept="image/*,video/*,audio/*"
                     onChange={handleMediaFilesSelected}
                     className="hidden"
                   />
@@ -1253,49 +1315,91 @@ export default function AdminPage() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {filteredMedia.map(file => (
-                <div
-                  key={file.url}
-                  className="bg-[#121c27] rounded-xl border border-slate-800 overflow-hidden flex flex-col group hover:border-[#C5A059]/60 transition duration-200"
-                >
-                  <div className="relative aspect-square w-full bg-slate-900 overflow-hidden flex items-center justify-center">
-                    <img
-                      src={file.url}
-                      alt={file.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                    />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2 p-2">
-                      <button
-                        onClick={() => copyToClipboard(file.url)}
-                        className="p-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-white transition"
-                        title="Copy Image URL"
-                      >
-                        {copiedUrl === file.url ? (
-                          <Check className="w-4 h-4 text-emerald-400" />
-                        ) : (
-                          <Copy className="w-4 h-4" />
-                        )}
-                      </button>
-                      <a
-                        href={file.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="p-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-white transition"
-                        title="Open image"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                      {file.isUploaded && (
-                        <button
-                          onClick={() => handleDeleteMedia(file.name, file.url)}
-                          className="p-1.5 rounded-md bg-rose-900/80 hover:bg-rose-800 text-white transition"
-                          title="Delete image"
-                        >
-                          <Trash2 className="w-4 h-4 text-rose-300" />
-                        </button>
+              {filteredMedia.map(file => {
+                const isAudio = isAudioFile(file.name, file.url);
+                const isVideo = isVideoFile(file.name, file.url);
+
+                return (
+                  <div
+                    key={file.url}
+                    className="bg-[#121c27] rounded-xl border border-slate-800 overflow-hidden flex flex-col group hover:border-[#C5A059]/60 transition duration-200"
+                  >
+                    <div className="relative aspect-square w-full bg-slate-900 overflow-hidden flex items-center justify-center">
+                      {isAudio ? (
+                        <div className="w-full h-full relative bg-gradient-to-br from-indigo-950/70 via-slate-900 to-slate-950 flex flex-col items-center justify-center p-3 text-center">
+                          <div className="w-12 h-12 rounded-full bg-indigo-500/20 border border-indigo-400/40 flex items-center justify-center text-indigo-300 mb-2 shadow-inner group-hover:scale-110 transition duration-300">
+                            <Music className="w-6 h-6" />
+                          </div>
+                          <span className="text-[10px] text-indigo-200/90 font-mono truncate max-w-full px-2">
+                            Audio Track
+                          </span>
+                          <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-indigo-500/80 text-white uppercase tracking-wider">
+                            Audio
+                          </span>
+                        </div>
+                      ) : isVideo ? (
+                        <div className="w-full h-full relative bg-slate-950 flex items-center justify-center">
+                          <video
+                            src={file.url}
+                            className="w-full h-full object-cover pointer-events-none"
+                            muted
+                            playsInline
+                            preload="metadata"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                            <div className="w-10 h-10 rounded-full bg-slate-900/90 border border-[#C5A059]/60 flex items-center justify-center text-[#C5A059] shadow-lg group-hover:scale-110 transition duration-300">
+                              <Play className="w-5 h-5 ml-0.5 fill-[#C5A059]" />
+                            </div>
+                          </div>
+                          <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-600/80 text-white uppercase tracking-wider">
+                            Video
+                          </span>
+                        </div>
+                      ) : (
+                        <img
+                          src={file.url}
+                          alt={file.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                          loading="lazy"
+                          onError={e => {
+                            (e.target as HTMLImageElement).src =
+                              'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="%2394a3b8" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+                          }}
+                        />
                       )}
+
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2 p-2">
+                        <button
+                          onClick={() => copyToClipboard(file.url)}
+                          className="p-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-white transition"
+                          title="Copy URL"
+                        >
+                          {copiedUrl === file.url ? (
+                            <Check className="w-4 h-4 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </button>
+                        <a
+                          href={file.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-white transition"
+                          title="Open media"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                        {file.isUploaded && (
+                          <button
+                            onClick={() => handleDeleteMedia(file.name, file.url)}
+                            className="p-1.5 rounded-md bg-rose-900/80 hover:bg-rose-800 text-white transition"
+                            title="Delete file"
+                          >
+                            <Trash2 className="w-4 h-4 text-rose-300" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
                   <div className="p-2.5 space-y-1">
                     <p className="text-[11px] font-medium text-slate-200 truncate" title={file.name}>
@@ -1312,8 +1416,9 @@ export default function AdminPage() {
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
+          </div>
           </div>
         )}
 
