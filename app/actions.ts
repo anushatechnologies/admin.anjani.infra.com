@@ -179,21 +179,25 @@ export async function uploadImageServerAction(formData: FormData) {
           upsert: true,
         });
 
-      if (!uploadErr && uploadData) {
+      if (!uploadErr && uploadData?.path) {
         const { data: urlData } = supabaseAdmin.storage
           .from('anjani-media')
-          .getPublicUrl(finalFilename);
+          .getPublicUrl(uploadData.path);
         publicUrl = urlData.publicUrl;
 
         // Save record to media_library table
         try {
-          await supabaseAdmin.from('media_library').insert({
+          const { error: insErr } = await supabaseAdmin.from('media_library').insert({
             filename: finalFilename,
             file_url: publicUrl,
             file_size: file.size,
-            mime_type: file.type,
+            mime_type: file.type || inferredMime,
             storage_path: uploadData.path,
+            uploaded_by: 'admin',
           });
+          if (insErr) {
+            console.warn('[Supabase DB] Error inserting into media_library:', insErr.message);
+          }
         } catch (dbErr: any) {
           console.warn('[Supabase] Warning recording media:', dbErr.message);
         }
@@ -245,24 +249,48 @@ export async function uploadImageServerAction(formData: FormData) {
 export async function getMediaFilesServerAction(): Promise<MediaFile[]> {
   const files: MediaFile[] = [];
 
-  // Try fetching from Supabase Storage
+  // 1. Primary: Fetch from Supabase DB (media_library) and Supabase Storage
   if (isSupabaseConfigured) {
     try {
-      const { data: remoteFiles, error } = await supabaseAdmin.storage
+      // Fetch from media_library table first (Source of Truth)
+      const { data: dbMedia, error: dbErr } = await supabaseAdmin
+        .from('media_library')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!dbErr && dbMedia && dbMedia.length > 0) {
+        for (const item of dbMedia) {
+          const displayName = item.filename || path.basename(item.file_url || '');
+          if (displayName && !files.some((f) => f.name === displayName || f.url === item.file_url)) {
+            files.push({
+              name: displayName,
+              url: item.file_url,
+              size: item.file_size || 0,
+              updatedAt: item.created_at || new Date().toISOString(),
+              isUploaded: true,
+            });
+          }
+        }
+      }
+
+      // Also list storage root for any uploaded files not recorded in media_library
+      const { data: remoteFiles, error: storageErr } = await supabaseAdmin.storage
         .from('anjani-media')
         .list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
 
-      if (!error && remoteFiles) {
+      if (!storageErr && remoteFiles) {
         for (const rf of remoteFiles) {
-          if (rf.name && !rf.name.startsWith('.')) {
-            const { data } = supabaseAdmin.storage.from('anjani-media').getPublicUrl(rf.name);
-            files.push({
-              name: rf.name,
-              url: data.publicUrl,
-              size: rf.metadata?.size || 0,
-              updatedAt: rf.updated_at || new Date().toISOString(),
-              isUploaded: true,
-            });
+          if (rf.name && !rf.name.startsWith('.') && rf.id) {
+            if (!files.some((f) => f.name === rf.name)) {
+              const { data } = supabaseAdmin.storage.from('anjani-media').getPublicUrl(rf.name);
+              files.push({
+                name: rf.name,
+                url: data.publicUrl,
+                size: rf.metadata?.size || 0,
+                updatedAt: rf.updated_at || new Date().toISOString(),
+                isUploaded: true,
+              });
+            }
           }
         }
       }
@@ -271,30 +299,32 @@ export async function getMediaFilesServerAction(): Promise<MediaFile[]> {
     }
   }
 
-  // Also include local uploads as fallback
-  try {
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-    if (fs.existsSync(uploadsDir)) {
-      const entries = await readdir(uploadsDir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (entry.isFile() && !files.some((f) => f.name === entry.name)) {
-          const filePath = path.join(uploadsDir, entry.name);
-          const fileStat = await stat(filePath);
-          files.push({
-            name: entry.name,
-            url: `/uploads/${entry.name}`,
-            size: fileStat.size,
-            updatedAt: fileStat.mtime.toISOString(),
-            isUploaded: true,
-          });
+  // 2. Fallback to local uploads ONLY if Supabase returned nothing (e.g. offline dev)
+  if (files.length === 0) {
+    try {
+      const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+      if (fs.existsSync(uploadsDir)) {
+        const entries = await readdir(uploadsDir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.isFile() && !files.some((f) => f.name === entry.name)) {
+            const filePath = path.join(uploadsDir, entry.name);
+            const fileStat = await stat(filePath);
+            files.push({
+              name: entry.name,
+              url: `/uploads/${entry.name}`,
+              size: fileStat.size,
+              updatedAt: fileStat.mtime.toISOString(),
+              isUploaded: true,
+            });
+          }
         }
       }
+    } catch {
+      // Local directory empty or not created
     }
-  } catch {
-    // Local directory empty or not created
   }
 
-  // If still empty, add default public assets as fallbacks so media tab is never empty
+  // 3. If still empty, add default public assets as fallbacks so media tab is never empty
   if (files.length === 0) {
     const defaultAssets = [
       { name: 'anjani-logo.png', url: '/anjani-logo.png', size: 762506, updatedAt: '2026-10-01T00:00:00.000Z' },
@@ -313,29 +343,124 @@ export async function getMediaFilesServerAction(): Promise<MediaFile[]> {
   return files.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 }
 
-export async function deleteMediaServerAction(filename: string) {
+export async function deleteMediaServerAction(identifier: string, fileUrl?: string) {
   try {
-    const safeFilename = path.basename(filename);
+    const rawIdentifier = (identifier || '').trim();
+    const cleanParam = rawIdentifier.split('?')[0];
+    const safeFilename = path.basename(cleanParam);
+    const cleanUrl = (fileUrl || '').trim().split('?')[0];
+    const urlFilename = cleanUrl ? path.basename(cleanUrl) : '';
 
-    // Remove from Supabase Storage
+    const searchTerms = Array.from(
+      new Set([
+        rawIdentifier,
+        cleanParam,
+        safeFilename,
+        urlFilename,
+        decodeURIComponent(safeFilename),
+        decodeURIComponent(cleanParam),
+      ])
+    ).filter(Boolean);
+
+    // 1. Delete from Supabase DB (media_library)
     if (isSupabaseConfigured) {
       try {
-        await supabaseAdmin.storage.from('anjani-media').remove([safeFilename]);
-        await supabaseAdmin.from('media_library').delete().eq('filename', safeFilename);
+        let matchedRecords: any[] = [];
+
+        // Check by UUID if applicable
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawIdentifier)) {
+          const { data } = await supabaseAdmin.from('media_library').select('*').eq('id', rawIdentifier);
+          if (data && data.length > 0) matchedRecords.push(...data);
+        }
+
+        // Query media_library for matches
+        for (const term of searchTerms) {
+          const { data } = await supabaseAdmin
+            .from('media_library')
+            .select('*')
+            .or(`filename.eq.${term},storage_path.eq.${term},file_url.ilike.%${term}%`);
+          if (data && data.length > 0) {
+            for (const item of data) {
+              if (!matchedRecords.some((m) => m.id === item.id)) {
+                matchedRecords.push(item);
+              }
+            }
+          }
+        }
+
+        // Delete from media_library table by ID
+        if (matchedRecords.length > 0) {
+          const ids = matchedRecords.map((m) => m.id);
+          const { error: dbDeleteErr } = await supabaseAdmin.from('media_library').delete().in('id', ids);
+          if (dbDeleteErr) {
+            console.error('[Supabase DB] Error deleting rows:', dbDeleteErr.message);
+          } else {
+            console.log(`[Supabase DB] Deleted ${ids.length} row(s) from media_library`);
+          }
+        }
+
+        // Also direct delete by terms to ensure nothing remains in DB
+        for (const term of searchTerms) {
+          await supabaseAdmin.from('media_library').delete().eq('filename', term);
+          await supabaseAdmin.from('media_library').delete().eq('storage_path', term);
+        }
+
+        // 2. Delete from Supabase Storage (anjani-media)
+        const storagePathsToDelete = new Set<string>();
+        storagePathsToDelete.add(safeFilename);
+        storagePathsToDelete.add(cleanParam);
+        if (urlFilename) storagePathsToDelete.add(urlFilename);
+
+        for (const rec of matchedRecords) {
+          if (rec.storage_path) storagePathsToDelete.add(rec.storage_path);
+          if (rec.filename) storagePathsToDelete.add(rec.filename);
+          if (rec.file_url && rec.file_url.includes('/anjani-media/')) {
+            const parts = rec.file_url.split('/anjani-media/');
+            if (parts[1]) storagePathsToDelete.add(decodeURIComponent(parts[1].split('?')[0]));
+          }
+        }
+
+        // Also add subfolder paths if path has no slash
+        if (!safeFilename.includes('/')) {
+          for (const folder of ['bedroom', 'kitchen', 'living', 'projects']) {
+            storagePathsToDelete.add(`${folder}/${safeFilename}`);
+          }
+        }
+
+        const fileList = Array.from(storagePathsToDelete).filter(Boolean);
+        if (fileList.length > 0) {
+          const { data: delStorData, error: delStorErr } = await supabaseAdmin.storage
+            .from('anjani-media')
+            .remove(fileList);
+          if (delStorErr) {
+            console.warn('[Supabase Storage] Delete error:', delStorErr.message);
+          } else {
+            console.log('[Supabase Storage] Removed storage objects:', delStorData);
+          }
+        }
       } catch (e: any) {
-        console.warn('[Supabase Storage] Delete error:', e.message);
+        console.warn('[Supabase] Warning during media deletion:', e.message);
       }
     }
 
-    // Remove from local file system
+    // 3. Remove from local file system (public/uploads)
     try {
-      const targetPath = path.join(process.cwd(), 'public', 'uploads', safeFilename);
-      await unlink(targetPath);
+      for (const term of searchTerms) {
+        const targetPath = path.join(process.cwd(), 'public', 'uploads', term);
+        if (fs.existsSync(targetPath)) {
+          await unlink(targetPath);
+        }
+        const customerPath = path.join('c:/Anjina/public/uploads', term);
+        if (fs.existsSync(customerPath)) {
+          await unlink(customerPath).catch(() => {});
+        }
+      }
     } catch {
-      // Ignored
+      // Ignored in serverless
     }
+
     revalidatePath('/');
-    return { success: true, message: 'Image deleted from Supabase & Storage' };
+    return { success: true, message: 'Image deleted from database & storage' };
   } catch (error: any) {
     return { success: false, message: error.message };
   }

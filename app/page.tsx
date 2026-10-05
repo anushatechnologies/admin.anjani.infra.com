@@ -286,10 +286,10 @@ export default function AdminPage() {
     showToast(`${successCount} image(s) processed by Next.js Server Action`);
   };
 
-  const handleDeleteMedia = async (filename: string) => {
+  const handleDeleteMedia = async (filename: string, fileUrl?: string) => {
     if (!confirm(`Delete image "${filename}"?`)) return;
     startTransition(async () => {
-      const res = await deleteMediaServerAction(filename);
+      const res = await deleteMediaServerAction(filename, fileUrl);
       if (res.success) {
         showToast('Image deleted');
         const updatedMedia = await getMediaFilesServerAction();
@@ -1287,7 +1287,7 @@ export default function AdminPage() {
                       </a>
                       {file.isUploaded && (
                         <button
-                          onClick={() => handleDeleteMedia(file.name)}
+                          onClick={() => handleDeleteMedia(file.name, file.url)}
                           className="p-1.5 rounded-md bg-rose-900/80 hover:bg-rose-800 text-white transition"
                           title="Delete image"
                         >
